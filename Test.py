@@ -22,7 +22,7 @@ NB_EPOCHS_FRAME_ONLY=0 #5
 LEX_DROPOUT=0.33
 
 
-split_info_file = './FrenchFN-corpus-1_3/sequoiaftb_split_info'
+split_info_file = './FrenchFN-corpus-1_3/sequoiaftb_split_info.txt'
 gold_conll_file = './FrenchFN-corpus-1_3/sequoia+ftb.asfalda_sem_annotated.1_3.conll'
 pretrained_w_emb = './vecs100-linear-frwiki'
 
