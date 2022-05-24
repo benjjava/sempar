@@ -6,7 +6,7 @@
 
 import torch
 import torch.nn as nn
-import torch.nn.functionnal as F
+import torch.nn.functional as F
 from torch import Tensor
 from typing import Callable, Optional
 
