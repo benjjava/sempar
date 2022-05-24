@@ -189,7 +189,7 @@ class DepGraphDataSet(DepDataSet):
         super(DepGraphDataSet, self).__init__(*args, **kwargs)
 
         # sentences (list of token lists), with all strings converted to ids
-        self.isentences = indices.convert_frame_symbols_to_indices(self.sentences)
+        self.isentences = self.indices.convert_frame_symbols_to_indices(self.sentences)
         
         # total number of token pairs in dataset (max number of arcs)
         self.nb_tok_pairs = sum([ len(s)**2 for s in self.sentences ])
