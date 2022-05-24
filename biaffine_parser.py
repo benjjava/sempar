@@ -19,6 +19,9 @@ def fscore(nb_correct, nb_gold, nb_pred):
     p = nb_correct / nb_pred
     return 100*2*r*p/(p+r)
 
+
+
+
 class BiAffineParser(nn.Module):
     """
 dozat and manning 2018 hyperparameters: (table 2 p4)
@@ -112,8 +115,7 @@ mlp_lab_o_size = 400
             #    sys.stderr.write("Error, pretrained embeddings are of size %d whereas %d is expected"
             #                     % (matrix.shape[1], w_emb_size))
             if w_vocab_size != matrix.shape[0]:
-                sys.stderr.write("Error, pretrained embeddings have a %d vocab size while indices have %d"
-#                                  % (matrix.shape[0], w_vocab_size))
+                sys.stderr.write("Error, pretrained embeddings have a %d vocab size while indices have %d"% (matrix.shape[0], w_vocab_size))
             self.w_embs = nn.Embedding.from_pretrained(matrix, freeze = False).to(self.device)
             # linear transformation of the pre-trained embeddings (dozat 2018)
             self.w_emb_linear_reduction = nn.Linear(matrix.shape[1],w_emb_size).to(self.device)
@@ -264,7 +266,7 @@ mlp_lab_o_size = 400
         elif self.stack == 'cat':
             arc_h = self.arc_h_mlp(torch.cat((lstm_hidden_seq, hidden_frame), dim=-1))
             lab_h = self.lab_h_mlp(torch.cat((lstm_hidden_seq, hidden_frame), dim=-1))
-            
+
         else:
             arc_h = self.arc_h_mlp(lstm_hidden_seq)
             lab_h = self.lab_h_mlp(lstm_hidden_seq)
@@ -378,13 +380,13 @@ mlp_lab_o_size = 400
 
         if self.dyn_weighting:
             precision0 = torch.exp(-self.log_vars[0])
-            loss0 = precision0*frame_loss + self.log_vars[0]
+            loss0 = precision0*frame_loss + self.log_vars[0]/2
 
             precision1 = torch.exp(-self.log_vars[1])
-            loss1 = precision1*arc_loss + self.log_vars[1]
+            loss1 = precision1*arc_loss + self.log_vars[1]/2
 
             precision2 = torch.exp(-self.log_vars[2])
-            loss2 = precision2*lab_loss + self.log_vars[2]
+            loss2 = precision2*lab_loss + self.log_vars[2]/2
 
             loss = loss0+loss1+loss2
         
@@ -394,7 +396,7 @@ mlp_lab_o_size = 400
         # returning the sub-losses too for trace purpose
         return loss, frame_loss.item(), arc_loss.item(), lab_loss.item(), nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_gold_frame, nb_gold, nb_pred    
     
-    def train_model(self, train_data, val_data, outdir, config_name, nb_epochs, batch_size, lr, lex_dropout, alpha=0.1, nb_epochs_frame_only=0, graph_mode=True, frame_training=True, role_training=False, pos_weight=None):
+    def train_model(self, train_data, val_data, outdir, config_name, nb_epochs, batch_size, lr, lex_dropout, alpha=0.1, nb_epochs_frame_only=0, graph_mode=True, frame_training=True, role_training=False):
         """
                 
         For graph mode only:
@@ -416,22 +418,15 @@ mlp_lab_o_size = 400
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
         
         # loss functions
-        self.pos_weight = pos_weight
         # for graph mode arcs
         self.bce_loss_fn_arc = BCEWithLogitsLoss_with_mask(reduction='sum', pos_weight_scalar=pos_weight)
-        # for tree mode arcs and both tree and graph mode labels
-        #   (CrossEnt cf. softmax not applied yet in BiAffine output)
-        #   ignoring padded dep tokens (i.e. whose head equals PAD_HEAD_RK)
-        self.ce_loss_fn_arc = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_HEAD_RK)
         # for label loss, the label for padded deps is PAD_ID=0 
         #   ignoring padded dep tokens (i.e. whose label id equals PAD_ID)
         self.ce_loss_fn_label = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_ID) 
-
-        # the ignored tokens will be the padded ones, and the tokens that do not evoke any frame
+        # for frame loss,the ignored tokens will be the padded ones, and the tokens that do not evoke any frame
         self.ce_loss_fn_frame = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_ID) 
         
         self.config_name = config_name
-        self.pos_weight = pos_weight
                 
         out_model_file = outdir + '/' + config_name + '.model'
         out_log_file = outdir + '/' + config_name + '.log'
@@ -583,7 +578,7 @@ mlp_lab_o_size = 400
                     val_fscores_u.append( fscore(val_nb_correct_u, val_nb_gold, val_nb_pred) )            
                     val_fscores_l.append( fscore(val_nb_correct_l, val_nb_gold, val_nb_pred) )            
                     val_losses.append(val_loss)
-                    val_frame_losses.append(val_frame_loss))
+                    val_frame_losses.append(val_frame_loss)
                     val_arc_losses.append(val_arc_loss)
                     val_lab_losses.append(val_lab_loss)
 
