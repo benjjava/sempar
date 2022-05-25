@@ -647,7 +647,4 @@ mlp_lab_o_size = 400
         outstream.write("\n")
         for h in ['batch_size', 'beta1','beta2','lr', 'nb_epochs_frame_only', 'lex_dropout', 'use_pretrained_w_emb','graph_mode']:
           outstream.write("%s : %s\n" %(h, str(self.__dict__[h])))
-        if self.graph_mode:
-          outstream.write("pos_weight : %s\n" %(str(self.pos_weight)))
-          
         outstream.write("\n")
