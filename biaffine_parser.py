@@ -645,7 +645,7 @@ mlp_lab_o_size = 400
         for h in ['w_emb_size', 'l_emb_size', 'p_emb_size', 'lstm_h_size','mlp_arc_o_size','mlp_arc_dropout','beta1','beta2','lr','use_pretrained_w_emb']:
           outstream.write("%s : %s\n" %(h, str(self.__dict__[h])))
         outstream.write("\n")
-        for h in ['batch_size', 'beta1','beta2','lr','lab_loss_weight', 'nb_epochs_frame_only', 'lex_dropout', 'use_pretrained_w_emb','graph_mode']:
+        for h in ['batch_size', 'beta1','beta2','lr', 'nb_epochs_frame_only', 'lex_dropout', 'use_pretrained_w_emb','graph_mode']:
           outstream.write("%s : %s\n" %(h, str(self.__dict__[h])))
         if self.graph_mode:
           outstream.write("pos_weight : %s\n" %(str(self.pos_weight)))
