@@ -419,7 +419,7 @@ mlp_lab_o_size = 400
         
         # loss functions
         # for graph mode arcs
-        self.bce_loss_fn_arc = BCEWithLogitsLoss_with_mask(reduction='sum', pos_weight_scalar=pos_weight)
+        self.bce_loss_fn_arc = BCEWithLogitsLoss_with_mask(reduction='sum')
         # for label loss, the label for padded deps is PAD_ID=0 
         #   ignoring padded dep tokens (i.e. whose label id equals PAD_ID)
         self.ce_loss_fn_label = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_ID) 
