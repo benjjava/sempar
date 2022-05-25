@@ -174,7 +174,7 @@ class DepDataSet:
         if self.nodrop_isentences == None:
           self.nodrop_isentences = self.isentences
         # should be applicable several times  (application on nodrop_isentences)
-        self.isentences = indices.lex_dropout_isentences(self.nodrop_isentences, lex_dropout_rate)
+        self.isentences = self.indices.lex_dropout_isentences(self.nodrop_isentences, lex_dropout_rate)
 
 
 
