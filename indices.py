@@ -231,11 +231,11 @@ class Indices:
             vect = [float(x) for x in cols[1:]]
             self.vocabs['w']['s2i'][w] = i
             self.vocabs['w']['i2s'].append(w)
-            self.iw2emb.append(vect)
+            self.iw2emb.append(np.array(vect))
             
             line = instream.readline()
             
-        self.w_emb_matrix = torch.tensor(self.iw2emb).float()
+        self.w_emb_matrix = torch.tensor(np.vstack(self.iw2emb)).float()
         print("Pretrained word embeddings shape:", self.w_emb_matrix.shape)
         
         
