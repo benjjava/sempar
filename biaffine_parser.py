@@ -3,6 +3,7 @@
 import torch as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.optim as optim
+import numpy as np
 from random import shuffle
 import sys
 
@@ -55,19 +56,18 @@ mlp_lab_o_size = 400
     def __init__(self, indices, device, 
                  stacked='simple',
                  w_emb_size=10, #125
-                 l_emb_size=None, 
+                 l_emb_size=10 , 
                  p_emb_size=None, # 100,
                  use_pretrained_w_emb=False,
                  lstm_dropout=0.33, 
                  lstm_h_size=20, # 600
                  lstm_num_layers=3, 
-                 mlp_frame_h_size=100, #TEST
+                 mlp_frame_h_size=400, #TEST
                  mlp_frame_dropout=0.25,
                  mlp_arc_o_size=25, # 600
                  mlp_arc_dropout=0.25, 
                  mlp_lab_o_size=10, # 600
                  mlp_lab_dropout=0.25,
-                 
                  use_bias=False,
                  dyn_weighting=False,
                  freeze_bert = True,
@@ -102,7 +102,7 @@ mlp_lab_o_size = 400
         self.dyn_weighting = dyn_weighting
         if self.dyn_weighting :
             #self.log_vars = nn.Parameter(torch.ones((3))).to(self.device)
-            self.log_vars = nn.Parameter(torch.zeros((3))).to(self.device)
+            self.log_vars = nn.Parameter(torch.ones((3))).to(self.device)
     
         # -------------------------
         # word form embedding layer
@@ -132,13 +132,11 @@ mlp_lab_o_size = 400
             self.p_embs = None
 
         # -------------------------
-        # lemma embedding layer
-        if l_emb_size:
-            l_vocab_size = indices.get_vocab_size('l')
-            self.lexical_emb_size += l_emb_size
-            self.l_embs = nn.Embedding(l_vocab_size, l_emb_size).to(self.device)
-        else:
-            self.l_embs = None
+        # lemma embedding layer, needed for frame
+        l_vocab_size = indices.get_vocab_size('l')
+        self.lexical_emb_size += l_emb_size
+        self.l_embs = nn.Embedding(l_vocab_size, l_emb_size).to(self.device)
+
 
         # -------------------------
         # bert embedding layer
@@ -175,18 +173,30 @@ mlp_lab_o_size = 400
         #option use hiddenframe for stacked prop
         if self.stack == 'simple':
             h = f 
-
         #option use hiddenframe for stacked prop with concateation
         elif self.stack == 'cat':
             h= f+s
-        
+        #option for baselin pipeline:
+        elif self.stack == 'pipeline':
+            h = s + f
         #no stack prop
         else:
-            h= s
+            h = s
 
-        #frame id
+        #---------------------
+        #frame part
+        #first frame identification
         self.frame_mlp = MLP_out_hidden(s+l_emb_size, mlp_frame_h_size, self.num_frames, dropout=0).to(device)  
-        
+        #one more option with pipeline
+        # frame embedding layer
+        if self.stack == 'pipeline':
+            f_vocab_size = indices.get_vocab_size('frame')
+            self.f_embs = nn.Embedding(f_vocab_size, f).to(self.device)
+        else:
+            self.f_embs = None
+
+
+        #MLPs        
         self.arc_d_mlp = MLP(s, a, a, dropout=mlp_arc_dropout).to(device)  
         self.arc_h_mlp = MLP(h, a, a, dropout=mlp_arc_dropout).to(device)  
 
@@ -200,7 +210,7 @@ mlp_lab_o_size = 400
         self.biaffine_lab = BiAffine(device, l, num_scores_per_arc=self.num_labels, use_bias=self.use_bias, diag=True)
 
 
-    def forward(self, w_id_seqs, l_id_seqs, p_id_seqs, bert_tid_seqs, bert_ftid_rkss, b_pad_masks, lengths=None, cat=True):
+    def forward(self, w_id_seqs, l_id_seqs, p_id_seqs, bert_tid_seqs, bert_ftid_rkss, b_pad_masks, b_fram_mat, lengths=None):
         """
         Inputs:
          - id sequences for word forms, lemmas and parts-of-speech for a batch of sentences
@@ -222,6 +232,7 @@ mlp_lab_o_size = 400
             w_embs = torch.cat((w_embs, p_embs), dim=-1)
 
         l_embs = self.l_embs(l_id_seqs)
+        
         if self.l_embs:
             w_embs = torch.cat((w_embs, l_embs), dim=-1)
         
@@ -267,6 +278,16 @@ mlp_lab_o_size = 400
             arc_h = self.arc_h_mlp(torch.cat((lstm_hidden_seq, hidden_frame), dim=-1))
             lab_h = self.lab_h_mlp(torch.cat((lstm_hidden_seq, hidden_frame), dim=-1))
 
+        elif self.stack == 'pipeline':
+            if self.training:
+                f_emb = self.f_embs(b_fram_mat)
+            else:
+                # out_frame is [batch, seqlength, frame]
+                #mask no frame
+                f_emb = self.f_embs( (b_fram_mat > 0).int() * torch.argmax(out_frame, dim= 2 ) )
+            arc_h = self.arc_h_mlp(torch.cat((lstm_hidden_seq, f_emb), dim=-1))
+            lab_h = self.lab_h_mlp(torch.cat((lstm_hidden_seq, f_emb), dim=-1))
+        
         else:
             arc_h = self.arc_h_mlp(lstm_hidden_seq)
             lab_h = self.lab_h_mlp(lstm_hidden_seq)
@@ -285,32 +306,22 @@ mlp_lab_o_size = 400
         
         return S_arc, S_lab, out_frame
     
-    def batch_forward_and_loss(self, batch, arc_l0=None, lab_l0=None):
+    def batch_forward_and_loss(self, batch):
         """
         - batch of sentences (output of make_batches)
-        - lab_loss_weight : weight for label loss (arc loss weight is 1 - x)
-        - arc_l0 and lab_l0 : arc and lab losses of first batch
-          if set to non None,
-          actual weight of lab_loss (resp. arc_loss) is lab_loss_weight * (lab_loss/lab_l0)
-          (Liu et al. AAAI 19)
+        
 
         NB: in batch graph mode
           - in arc_adja (resp. lab_adja), 0 cells are either
              - 0 cells for non gold or padded
              - 1 (resp. label id) for gold arcs
           - pad_masks : 0 cells if head or dep is padded token and 1 otherwise
-        Used losses:
-        for arcs:
-           - tree mode  : self.ce_loss_fn_arc : cross-entropy loss (ignore_index = -1)
-           - graph mode : self.bce_loss_fn_arc : binary cross-entropy
-        for labels (tree and graph mode)                               
-          - self.ce_loss_fn_label : cross-entropy loss with ignore_index = 0 MOCHE A CHANGER
         """
         if self.graph_mode:
             lengths, pad_masks, pred_masks, forms, lemmas, tags, bert_tokens, bert_ftid_rkss, arc_adja, lab_adja, fram_mat = batch
             
             # forward 
-            S_arc, S_lab , S_frame = self(forms, lemmas, tags, bert_tokens, bert_ftid_rkss, pad_masks, lengths=lengths)
+            S_arc, S_lab , S_frame = self(forms, lemmas, tags, bert_tokens, bert_ftid_rkss, pad_masks, fram_mat, lengths=lengths)
 
             if self.role_training and self.nb_epochs_frame_only == 0:
                 # --- Arc loss -------------------------
@@ -396,7 +407,8 @@ mlp_lab_o_size = 400
         # returning the sub-losses too for trace purpose
         return loss, frame_loss.item(), arc_loss.item(), lab_loss.item(), nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_gold_frame, nb_gold, nb_pred    
     
-    def train_model(self, train_data, val_data, outdir, config_name, nb_epochs, batch_size, lr, lex_dropout, alpha=0.1, nb_epochs_frame_only=0, graph_mode=True, frame_training=True, role_training=False):
+
+    def train_model(self, train_data, val_data, log_stream, nb_epochs, batch_size, lr, lex_dropout, nb_epochs_frame_only=0, out_model_file=None, graph_mode=True, frame_training=True, role_training=False, pos_weight=None, config_name=None, score_csv=None):
         """
                 
         For graph mode only:
@@ -418,8 +430,9 @@ mlp_lab_o_size = 400
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
         
         # loss functions
+        self.pos_weight=pos_weight
         # for graph mode arcs
-        self.bce_loss_fn_arc = BCEWithLogitsLoss_with_mask(reduction='sum')
+        self.bce_loss_fn_arc = BCEWithLogitsLoss_with_mask(reduction='sum', pos_weight_scalar=pos_weight)
         # for label loss, the label for padded deps is PAD_ID=0 
         #   ignoring padded dep tokens (i.e. whose label id equals PAD_ID)
         self.ce_loss_fn_label = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_ID) 
@@ -456,18 +469,14 @@ mlp_lab_o_size = 400
         val_fscores_u = []
         val_fscores_l = []
         
-        min_val_loss = None
-        max_val_perf = 0
+        best_epoch   = 0                 
+        min_val_loss = np.inf
+
 
         # word / pos / lemma dropout of training data only
         # NB: re-drop at each epoch seems quite detrimental
         #train_data.lex_dropout(lex_dropout)
 
-        # will be set to True if arc loss increases but not lab loss
-        self.lab_loss_only = False
-        # losses of first batch
-        arc_l0 = None
-        lab_l0 = None
 
         for epoch in range(1,nb_epochs+1):
             #log_gc()
@@ -489,7 +498,7 @@ mlp_lab_o_size = 400
 
             # training mode (certain modules behave differently in train / eval mode)
             self.train()
-            train_data.lex_dropout(lex_dropout) # don't understand why detrimental here
+            train_data.lex_dropout(lex_dropout)
             bid = 0
             for batch in train_data.make_batches(self.batch_size, shuffle_data=True, sort_dec_length=True, shuffle_batches=True):        
                 self.zero_grad()
@@ -499,19 +508,15 @@ mlp_lab_o_size = 400
                   print("MEMORY BEFORE BATCH FORWARD AND LOSS")
                   printm()
 
-                loss, frame_loss, arc_loss, lab_loss, nb_correct_f, nb_correct_u, nb_correct_l, nb_gold_frame, nb_gold, nb_pred = self.batch_forward_and_loss(batch, arc_l0=None, lab_l0=None)
+                loss, frame_loss, arc_loss, lab_loss, nb_correct_f, nb_correct_u, nb_correct_l, nb_gold_frame, nb_gold, nb_pred = self.batch_forward_and_loss(batch)
                 train_loss += loss.item()
                 if frame_loss:
                     train_frame_loss += frame_loss
                 if arc_loss:
                     train_arc_loss += arc_loss
-                    if arc_l0 == None:
-                      arc_l0 = arc_loss
                 if lab_loss:
                     train_lab_loss += lab_loss
-                    if lab_l0 == None:
-                      lab_l0 = lab_loss
-                
+
                 loss.backward()
                 optimizer.step() 
                 loss.detach()           
@@ -584,39 +589,14 @@ mlp_lab_o_size = 400
 
                 self.log_perf(log_stream, epoch, 'Valid', val_loss, val_frame_loss, val_arc_loss, val_lab_loss, val_scores_fr[-1], val_fscores_u[-1], val_fscores_l[-1])
 
-                """
-                if epoch == 1:
-                    #min_val_loss = val_loss
-                    max_val_perf = val_fscores_l[-1]
-                    print("saving model after first epoch\n")
-                    torch.save(self, out_model_file)
-                # if validation loss has decreased: save model
-                # nb: when label loss comes into play, it might artificially increase the overall loss
-                #     => we don't early stop at this stage 
-                #elif (val_losses[-1] < val_losses[-2]) or (epoch == self.nb_epochs_arc_only) :
-                elif (val_fscores_l[-1] > val_fscores_l[-2]) or (epoch == self.nb_epochs_arc_only) :
+                #save the parameters if needed
+                if min_val_loss  > val_loss and self.nb_epochs_frame_only==0:
+                    min_val_loss = val_loss
+                    best_epoch   = epoch
                     for stream in [sys.stdout, log_stream]:
-                        stream.write("Validation perf has increased, saving model, current nb epochs = %d\n" % epoch)
-                    torch.save(self, out_model_file)
-                # if overall loss increase, but still a decrease for the lab loss
-                # desactivated because detrimental
-                #elif (val_lab_losses[-1] < val_lab_losses[-2]):
-                #    for stream in [sys.stdout, log_stream]:
-                #        stream.write("Label Validation loss has decreased, saving model, current nb epochs = %d\n" % epoch)
-                #    torch.save(self, out_model_file)
-                #    self.lab_loss_only = True
-                # otherwise: early stopping, stop training, reload previous model
-                # NB: the model at last epoch was not saved yet
-                # => we can reload the model from the previous storage
-                else:
-                    print("Validation perf has decreased, reloading previous model, and stop training\n")
-                    # reload
-                    # REM:the loading of tensors will be done on the device they were copied from
-                    # cf. https://pytorch.org/docs/stable/generated/torch.load.html#torch-load
-                    self = torch.load(out_model_file)
-                    # stop loop on epochs
-                    break
-                """
+                        stream.write(" saving model, current nb epochs = %d\n" % epoch)
+                    if out_model_file:
+                        torch.save(self.state_dict(), out_model_file)
 
             scheduler.step()
         for stream in [sys.stdout, log_stream]:
@@ -629,7 +609,40 @@ mlp_lab_o_size = 400
           stream.write("train   lab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_l]))
           stream.write("val     lab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_l]))
 
+
+
         print('drop token w emb', self.indices.iw2emb[2])
+
+        log_heading_res, log_values_res = build_log_res(self, min_val_loss, val_scores_fr[best_epoch-1], val_fscores_u[best_epoch-1], val_fscores_l[best_epoch-1])
+        if config_name:
+            log_heading_res.append("config_name")
+            log_values_res.append(config_name)
+
+        log_stream.write('\t'.join(['RESULT'] + log_heading_res ) +'\n')
+        log_stream.write('\t'.join(['RESULT'] + log_values_res ) +'\n')
+
+        if csv_path:
+            df = pd.DataFrame([log_values_res], columns=log_heading_res)
+            df.to_csv(csv_path, mode='a', index=False, header=not os.path.exists(csv_path))
+
+
+    def build_log_res(self, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l):
+        # Fscore for tasks a, l, ah, lh (ah = n best-scored arcs, n computed with nbheads task (h))
+        self.log_heading_suff = '\t'.join([ 'RESULT', 'corpus', 'Af', 'Fu', 'Fl'] )
+
+        featnames = ['w_emb_size', 'use_pretrained_w_emb', 
+                    'l_emb_size', 'p_emb_size', 'bert_name', 'freeze_bert', 
+                    'lstm_h_size', 'lstm_dropout', 'mlp_arc_o_size','mlp_arc_dropout', 
+                    'mlp_frame_h_size','batch_size', 'beta1','beta2','lr', 'lex_dropout', 
+                    'mlp_lab_o_size', 'mlp_lab_dropout', 'dyn_weighting', 'stack' ]
+        featvals = [ str(self.__dict__[f]) for f in featnames ]
+
+
+        log_heading_res = ['best_epoch', 'min_val_loss', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
+        log_values_res  = [best_epoch, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l] + featvals 
+
+        return log_heading_res, log_values_res
+       
 
     def log_perf(self, outstream, epoch, ctype, l, frame_l, arc_l, lab_l, acc_fr, f_u, f_l):
         for stream in [sys.stdout, outstream]:
@@ -648,3 +661,146 @@ mlp_lab_o_size = 400
         for h in ['batch_size', 'beta1','beta2','lr', 'nb_epochs_frame_only', 'lex_dropout', 'use_pretrained_w_emb','graph_mode']:
           outstream.write("%s : %s\n" %(h, str(self.__dict__[h])))
         outstream.write("\n")
+
+
+
+    def predict_and_evaluate(self, test_data, parsed_file=None, csv_file=None, config_name=None):
+        """ predict on test data and evaluate 
+        if out_file is set, prediction will be dumped in readable format in out_file
+        if data_file is set, the score from evaluation will be store in data_file.
+        """
+
+        if parsed_file:
+            out_stream = open(parsed_file, 'w')
+        else:
+            out_stream = None
+
+        test_nb_correct_f = 0
+        test_nb_correct_u = 0
+        test_nb_correct_l = 0
+        test_nb_gold_frame = 0
+        test_nb_gold = 0
+        test_nb_pred = 0
+
+        self.eval()
+
+        with torch.no_grad():
+            for batch in test_data.make_batches(self.batch_size, shuffle_data=False, sort_dec_length=True, shuffle_batches=False):
+
+                nb_correct_f, nb_correct_u, nb_correct_l, nb_gold_frame, nb_gold, nb_pred = self.batch_predict_and_evaluate(batch, out_stream)
+
+                test_nb_correct_f += nb_correct_f
+                test_nb_correct_u += nb_correct_u
+                test_nb_correct_l += nb_correct_l
+                test_nb_gold_frame += nb_gold_frame
+                test_nb_gold += nb_gold
+                test_nb_pred += nb_pred
+
+        scores_names  = ['test_score_fra', 'test_fscore_u', 'test_fscore_l']
+        scores_values = [test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred)]
+        for stream in [sys.stdout, log_stream]:
+            stream.write(list(zip(scores_names, scores_values)))
+
+        if csv_file:
+
+            featnames = ['w_emb_size', 'use_pretrained_w_emb', 
+                    'l_emb_size', 'p_emb_size', 'bert_name', 'freeze_bert', 
+                    'lstm_h_size', 'lstm_dropout', 'mlp_arc_o_size','mlp_arc_dropout', 
+                    'mlp_frame_h_size','batch_size', 'beta1','beta2','lr', 'lex_dropout', 
+                    'mlp_lab_o_size', 'mlp_lab_dropout', 'dyn_weighting', 'stack' ]
+            featvals = [ str(self.__dict__[f]) for f in featnames ]
+
+            if config_name:
+                featnames.append("config_name")
+                featvals.append(config_name)
+
+            scores_names  = scores_names + featnames 
+            scores_values = scores_values + featvals
+            df = pd.DataFrame([scores_values], columns=scores_names)
+            df.to_csv(csv_path, mode='a', index=False, header=not os.path.exists(csv_path))
+
+        #self.log_test_perf(log_stream, 'test', test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred))
+
+
+
+
+    def batch_predict_and_evaluate(self, out_stream)
+
+        lengths, pad_masks, pred_masks, forms, lemmas, tags, bert_tokens, bert_ftid_rkss, arc_adja, lab_adja, fram_mat = batch
+
+        #forward
+        S_arc, S_lab , S_frame = self(forms, lemmas, tags, bert_tokens, bert_ftid_rkss, pad_masks, fram_mat, lengths=lengths)
+        linear_pad_mask = pad_masks[:,0,:] # from [b, m, m] to [b, m]
+
+        #predictions and scores
+        if self.frame_training:
+            pred_frame = torch.argmax(S_frame, dim= 2 ) #dim frame
+            nb_correct_f = torch.sum((pred_frame == fram_mat).float() * (fram_mat > 0).int()).item() #  
+            nb_gold_frame = torch.sum((fram_mat > 0).int()).item()
+        else :
+            nb_correct_f = 0
+            nb_gold_frame = 0
+
+        if self.role_training:
+            #unlabeled scores
+            pred_arcs = (S_arc > 0).int() * pred_masks  # b, h, d
+            nb_correct_u = torch.sum((pred_arcs * arc_adja).int()).item()
+            nb_gold = torch.sum(arc_adja).item()
+            nb_pred = torch.sum(pred_arcs).item()
+
+            #labeled scores
+            pred_labels = torch.argmax(S_lab, dim=1) # for all arcs (not only the predicted arcs)
+            # count correct labels for the predicted arcs only
+            nb_correct_u_and_l = torch.sum((pred_labels == lab_adja).float() * pred_arcs).item()
+        else:
+            nb_correct_u = 0
+            nb_correct_u_and_l = 0
+            nb_gold = 0
+            nb_pred = 0
+
+        if out_stream:
+
+            # whether sentences in batch start with a dummy root token or not
+            root_form_id = self.indices.s2i('w', ROOT_FORM)
+            if forms[0,0] == root_form_id:
+                start = 1
+                add = 0
+            else:
+                start = 0
+                add = 1
+
+            (batch_size, n) = forms.size() 
+
+            for b in range(batch_size):     # sent in batch
+                for d in range(start, n):   # tok in sent (skiping root token)
+                    if forms[b,d] == PAD_ID:
+                        break
+                    out = [str(d+add), self.indices.i2s('w', forms[b,d])]
+
+                    if self.frame_training:
+                        if fram_mat[b,d]:
+                            out.append(self.indices.i2s('frame', fram_mat[b,d]) )
+                            out.append(self.indices.i2s('frame', pred_frame[b,d]) )
+                        else:
+                            out.append('_')
+                            out.append('_')
+
+                    if self.role_training:
+                        # gold head / label pairs for dependent d
+                        gpairs = [ [h, self.indices.i2s('label', lab_adja[b,h,d])] for h in range(n) if lab_adja[b,h,d] != 0 ] # PAD_ID or no arc == 0
+                        # predicted head / label pairs for dependent d, for predicted arcs only
+                        ppairs = [ [h, self.indices.i2s('label', pred_labels[b,h,d])] for h in range(n) if pred_arcs[b,h,d] != 0 ]
+
+                        for pairs in [gpairs] + [ ppairs]:
+                            if len(pairs):
+                                hs, ls = zip(*pairs)
+                                out.append('|'.join( [ str(x+add) for x in hs ] ))
+                                out.append('|'.join(  ls  ))
+                            else:
+                                out.append('_')
+                                out.append('_')
+
+                    out_stream.write('\t'.join(out) + '\n')
+                out_stream.write('\n')
+
+        return nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_gold_frame, nb_gold, nb_pred
