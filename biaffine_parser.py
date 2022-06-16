@@ -724,7 +724,7 @@ mlp_lab_o_size = 400
 
 
 
-    def batch_predict_and_evaluate(self, batch, out_stream)
+    def batch_predict_and_evaluate(self, batch, out_stream):
 
         lengths, pad_masks, pred_masks, forms, lemmas, tags, bert_tokens, bert_ftid_rkss, arc_adja, lab_adja, fram_mat = batch
 
