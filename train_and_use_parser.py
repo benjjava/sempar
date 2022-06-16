@@ -158,7 +158,7 @@ if __name__ == "__main__":
 								nb_epochs_frame_only=args.only_frame_nb_epoch, 
 								frame_training=args.frame_training, 
 								role_training=args.role_training,
-								pos_weight=args.pos_weight_scalar,
+								pos_weight=args.pos_arc_weight,
                                 config_name=args.config_name)
 
     logstream.close()

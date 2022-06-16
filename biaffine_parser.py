@@ -611,9 +611,9 @@ mlp_lab_o_size = 400
 
 
 
-        print('drop token w emb', self.indices.iw2emb[2])
+        #print('drop token w emb', self.indices.iw2emb[2])
 
-        log_heading_res, log_values_res = build_log_res(self, min_val_loss, val_scores_fr[best_epoch-1], val_fscores_u[best_epoch-1], val_fscores_l[best_epoch-1])
+        log_heading_res, log_values_res = self.build_log_res(best_epoch, min_val_loss, val_scores_fr[best_epoch-1], val_fscores_u[best_epoch-1], val_fscores_l[best_epoch-1])
         if config_name:
             log_heading_res.append("config_name")
             log_values_res.append(config_name)
@@ -626,7 +626,7 @@ mlp_lab_o_size = 400
             df.to_csv(csv_path, mode='a', index=False, header=not os.path.exists(csv_path))
 
 
-    def build_log_res(self, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l):
+    def build_log_res(self, best_epoch, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l):
         # Fscore for tasks a, l, ah, lh (ah = n best-scored arcs, n computed with nbheads task (h))
         self.log_heading_suff = '\t'.join([ 'RESULT', 'corpus', 'Af', 'Fu', 'Fl'] )
 
@@ -634,7 +634,7 @@ mlp_lab_o_size = 400
                     'l_emb_size', 'p_emb_size', 'bert_name', 'freeze_bert', 
                     'lstm_h_size', 'lstm_dropout', 'mlp_arc_o_size','mlp_arc_dropout', 
                     'mlp_frame_h_size','batch_size', 'beta1','beta2','lr', 'lex_dropout', 
-                    'mlp_lab_o_size', 'mlp_lab_dropout', 'dyn_weighting', 'stack' ]
+                    'mlp_lab_o_size', 'mlp_lab_dropout', 'pos_weight','dyn_weighting', 'stack' ]
         featvals = [ str(self.__dict__[f]) for f in featnames ]
 
 
@@ -707,7 +707,7 @@ mlp_lab_o_size = 400
                     'l_emb_size', 'p_emb_size', 'bert_name', 'freeze_bert', 
                     'lstm_h_size', 'lstm_dropout', 'mlp_arc_o_size','mlp_arc_dropout', 
                     'mlp_frame_h_size','batch_size', 'beta1','beta2','lr', 'lex_dropout', 
-                    'mlp_lab_o_size', 'mlp_lab_dropout', 'dyn_weighting', 'stack' ]
+                    'mlp_lab_o_size', 'mlp_lab_dropout', 'pos_weight', 'dyn_weighting', 'stack' ]
             featvals = [ str(self.__dict__[f]) for f in featnames ]
 
             if config_name:
@@ -724,7 +724,7 @@ mlp_lab_o_size = 400
 
 
 
-    def batch_predict_and_evaluate(self, out_stream)
+    def batch_predict_and_evaluate(self, batch, out_stream)
 
         lengths, pad_masks, pred_masks, forms, lemmas, tags, bert_tokens, bert_ftid_rkss, arc_adja, lab_adja, fram_mat = batch
 
