@@ -95,38 +95,38 @@ if __name__ == "__main__":
 
 
     # ------------- DATA (WITHOUT INDICES YET) ------------------------------
-	print('loading sentences...')
-	sentences = load_frame_graphs(args.conll_file, args.split_info_file,val_proportion=None,other_sense=args.other_sense)
+....print('loading sentences...')
+....sentences = load_frame_graphs(args.conll_file, args.split_info_file,val_proportion=None,other_sense=args.other_sense)
 
-	if args.w_emb_file != 'None':
-		w_emb_file = args.w_emb_file
-		use_pretrained_w_emb = True
-	else:
-		w_emb_file = None
-		use_pretrained_w_emb = False
+....if args.w_emb_file != 'None':
+........w_emb_file = args.w_emb_file
+........use_pretrained_w_emb = True
+....else:
+........w_emb_file = None
+........use_pretrained_w_emb = False
 
 
 
     if args.bert_name != 'None':
-		bert_tokenizer = AutoTokenizer.from_pretrained(args.bert_name)
-		bert_config = AutoConfig.from_pretrained(args.bert_name)
-		bert_model = AutoModel.from_pretrained(args.bert_name,return_dict=True)
-	else:
-		bert_tokenizer = None
-		args.bert_name = None
+........bert_tokenizer = AutoTokenizer.from_pretrained(args.bert_name)
+........bert_config = AutoConfig.from_pretrained(args.bert_name)
+........bert_model = AutoModel.from_pretrained(args.bert_name,return_dict=True)
+....else:
+........bert_tokenizer = None
+........args.bert_name = None
 
-	# ------------- INDICES ------------------------------
+....# ------------- INDICES ------------------------------
     # indices are defined on train sentences only
     print('indices...')
     indices = Indices(sentences['train'], w_embeddings_file=w_emb_file, bert_tokenizer=bert_tokenizer)
 
     data = {}
-	for part in sentences.keys():
-    	data[part] = DepGraphDataSet(part, sentences[part], indices, DEVICE)
+....for part in sentences.keys():
+    ....data[part] = DepGraphDataSet(part, sentences[part], indices, DEVICE)
 
     # ------------- THE PARSER ---------------------------
     biaffineparser = BiAffineParser(indices, DEVICE, 
-    								stacked=args.stack_mode,
+    ................................stacked=args.stack_mode,
                                     w_emb_size=args.w_emb_size,
                                     l_emb_size=args.l_emb_size,
                                     p_emb_size=args.p_emb_size,
@@ -155,10 +155,10 @@ if __name__ == "__main__":
                                args.lex_dropout,
                                out_model_file=model_file,
                                score_csv=args.out_csv_dev,
-								nb_epochs_frame_only=args.only_frame_nb_epoch, 
-								frame_training=args.frame_training, 
-								role_training=args.role_training,
-								pos_weight=args.pos_arc_weight,
+................................nb_epochs_frame_only=args.only_frame_nb_epoch, 
+................................frame_training=args.frame_training, 
+................................role_training=args.role_training,
+................................pos_weight=args.pos_arc_weight,
                                 config_name=args.config_name)
 
     logstream.close()
