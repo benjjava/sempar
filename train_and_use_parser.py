@@ -164,7 +164,7 @@ if __name__ == "__main__":
     logstream.close()
 
 
-    biaffineparser.load_state_dict(model_file)
+    biaffineparser.load_state_dict(torch.load(model_file))
 
 
     biaffineparser.predict_and_evaluate(data['test'], args.out_dir+'/parsed.txt', args.out_csv_test )
