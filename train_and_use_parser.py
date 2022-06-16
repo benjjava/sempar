@@ -143,12 +143,12 @@ if __name__ == "__main__":
     )
 
 
-    #train_data = data['train']
+    train_data = data['train']
     val_data = data['dev']
 
     logstream = open(args.out_dir+'/log_train', 'w')
 
-    biaffineparser.train_model(val_data, val_data, logstream,
+    biaffineparser.train_model(train_data, val_data, logstream,
                                args.nb_epochs,
                                args.batch_size,
                                args.learning_rate,
