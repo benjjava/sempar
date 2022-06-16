@@ -155,7 +155,7 @@ if __name__ == "__main__":
                                args.lex_dropout,
                                out_model_file=model_file,
                                score_csv=args.out_csv_dev,
-                                nb_epochs_frame_only=args.only_frame_nb_epoch, 
+                                nb_epochs_frame_only=args.only_frame_nb_epochs, 
                                 frame_training=args.frame_training, 
                                 role_training=args.role_training,
                                 pos_weight=args.pos_arc_weight,
