@@ -92,6 +92,7 @@ mlp_lab_o_size = 400
         self.mlp_frame_dropout = mlp_frame_dropout
         self.mlp_arc_o_size = mlp_arc_o_size
         self.mlp_arc_dropout = mlp_arc_dropout
+        self.mlp_lab_o_size = mlp_lab_o_size
         self.mlp_lab_dropout = mlp_lab_dropout
         self.lstm_num_layers = lstm_num_layers
         self.lstm_dropout = lstm_dropout
