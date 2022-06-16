@@ -64,14 +64,14 @@ if __name__ == "__main__":
 
 
     model_file = args.out_dir+'/model'
-
+    """
     # before anything: check whether we will be able to dump the model
     pdir = os.path.dirname(model_file)
     if not pdir: pdir = '.'
     # if parent dir is writable
     if not os.access(pdir, os.W_OK):
         exit("Model file %s will not be writable!\n" % model_file)
-
+    """
     # --------------------- DEVICE ---------------------
     # si un GPU est disponible on l'utilisera
     if torch.cuda.is_available():
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     logstream = open(args.out_dir+'/log_train', 'w')
 
-    biaffineparser.train_model(train_data, val_data, logstream,
+    biaffineparser.train_model(val_data, val_data, logstream,
                                args.nb_epochs,
                                args.batch_size,
                                args.learning_rate,
