@@ -617,9 +617,9 @@ mlp_lab_o_size = 400
         log_stream.write('\t'.join(['RESULT'] + log_heading_res ) +'\n')
         log_stream.write('\t'.join(['RESULT'] + log_values_res ) +'\n')
 
-        if csv_path:
+        if score_csv:
             df = pd.DataFrame([log_values_res], columns=log_heading_res)
-            df.to_csv(csv_path, mode='a', index=False, header=not os.path.exists(csv_path))
+            df.to_csv(score_csv, mode='a', index=False, header=not os.path.exists(score_csv))
 
 
     def build_log_res(self, best_epoch, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l):
@@ -713,7 +713,7 @@ mlp_lab_o_size = 400
             scores_names  = scores_names + featnames 
             scores_values = scores_values + featvals
             df = pd.DataFrame([scores_values], columns=scores_names)
-            df.to_csv(csv_path, mode='a', index=False, header=not os.path.exists(csv_path))
+            df.to_csv(csv_file, mode='a', index=False, header=not os.path.exists(csv_file))
 
         #self.log_test_perf(log_stream, 'test', test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred))
 
