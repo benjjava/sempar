@@ -468,7 +468,7 @@ mlp_lab_o_size = 400
         val_fscores_l = []
         
         best_epoch   = 0                 
-        min_val_loss = np.inf
+        best_l = 0
 
 
         # word / pos / lemma dropout of training data only
@@ -588,9 +588,9 @@ mlp_lab_o_size = 400
                 self.log_perf(log_stream, epoch, 'Valid', val_loss, val_frame_loss, val_arc_loss, val_lab_loss, val_scores_fr[-1], val_fscores_u[-1], val_fscores_l[-1])
 
                 #save the parameters if needed
-                if min_val_loss  > val_loss and self.nb_epochs_frame_only==0:
-                    min_val_loss = val_loss
-                    best_epoch   = epoch
+                if best_l < val_fscores_l[-1] and self.nb_epochs_frame_only==0:
+                    best_l = val_fscores_l[-1]
+                    best_epoch = epoch
                     for stream in [sys.stdout, log_stream]:
                         stream.write(" saving model, current nb epochs = %d\n" % epoch)
                     if out_model_file:
@@ -611,7 +611,7 @@ mlp_lab_o_size = 400
 
         #print('drop token w emb', self.indices.iw2emb[2])
 
-        log_heading_res, log_values_res = self.build_log_res(best_epoch, min_val_loss, val_scores_fr[best_epoch-1], val_fscores_u[best_epoch-1], val_fscores_l[best_epoch-1])
+        log_heading_res, log_values_res = self.build_log_res(best_epoch, val_scores_fr[best_epoch-1], val_fscores_u[best_epoch-1], val_fscores_l[best_epoch-1])
         if config_name:
             log_heading_res.append("config_name")
             log_values_res.append(config_name)
@@ -624,9 +624,7 @@ mlp_lab_o_size = 400
             df.to_csv(score_csv, mode='a', index=False, header=not os.path.exists(score_csv))
 
 
-    def build_log_res(self, best_epoch, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l):
-        # Fscore for tasks a, l, ah, lh (ah = n best-scored arcs, n computed with nbheads task (h))
-        self.log_heading_suff = '\t'.join([ 'RESULT', 'corpus', 'Af', 'Fu', 'Fl'] )
+    def build_log_res(self, best_epoch, val_score_fr, val_fscore_u, val_fscore_l):
 
         featnames = ['w_emb_size', 'use_pretrained_w_emb', 
                     'l_emb_size', 'p_emb_size', 'freeze_bert', 
@@ -636,8 +634,8 @@ mlp_lab_o_size = 400
         featvals = [ str(self.__dict__[f]) for f in featnames ]
 
 
-        log_heading_res = ['best_epoch', 'min_val_loss', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
-        log_values_res  = list(map(lambda x:"%5.2f" %x, [best_epoch, min_val_loss, val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
+        log_heading_res = ['best_epoch', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
+        log_values_res  = list(map(lambda x:"%5.2f" %x, [best_epoch, val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
 
         return log_heading_res, log_values_res
        
