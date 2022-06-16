@@ -439,11 +439,6 @@ mlp_lab_o_size = 400
         # for frame loss,the ignored tokens will be the padded ones, and the tokens that do not evoke any frame
         self.ce_loss_fn_frame = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_ID) 
         
-        self.config_name = config_name
-                
-        out_model_file = outdir + '/' + config_name + '.model'
-        out_log_file = outdir + '/' + config_name + '.log'
-        log_stream = open(out_log_file, 'w')
 
         self.log_train_hyper(sys.stdout)
         self.log_train_hyper(log_stream)
