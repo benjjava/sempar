@@ -16,7 +16,7 @@ from transformers import AutoModel, AutoTokenizer, AutoConfig
 # ---------- MAIN ------------------
 if __name__ == "__main__":
 
-	usage = """ Biaffine graph parser (Dozat et al. 2018) for frame, based on Marie Candito code"""
+    usage = """ Biaffine graph parser (Dozat et al. 2018) for frame, based on Marie Candito code"""
 
     # read arguments
     argparser = argparse.ArgumentParser(usage = usage)
