@@ -626,7 +626,7 @@ mlp_lab_o_size = 400
         self.log_heading_suff = '\t'.join([ 'RESULT', 'corpus', 'Af', 'Fu', 'Fl'] )
 
         featnames = ['w_emb_size', 'use_pretrained_w_emb', 
-                    'l_emb_size', 'p_emb_size', 'bert_name', 'freeze_bert', 
+                    'l_emb_size', 'p_emb_size', 'freeze_bert', 
                     'lstm_h_size', 'lstm_dropout', 'mlp_arc_o_size','mlp_arc_dropout', 
                     'mlp_frame_h_size','batch_size', 'beta1','beta2','lr', 'lex_dropout', 
                     'mlp_lab_o_size', 'mlp_lab_dropout', 'pos_weight','dyn_weighting', 'stack' ]
@@ -699,7 +699,7 @@ mlp_lab_o_size = 400
         if csv_file:
 
             featnames = ['w_emb_size', 'use_pretrained_w_emb', 
-                    'l_emb_size', 'p_emb_size', 'bert_name', 'freeze_bert', 
+                    'l_emb_size', 'p_emb_size', 'freeze_bert', 
                     'lstm_h_size', 'lstm_dropout', 'mlp_arc_o_size','mlp_arc_dropout', 
                     'mlp_frame_h_size','batch_size', 'beta1','beta2','lr', 'lex_dropout', 
                     'mlp_lab_o_size', 'mlp_lab_dropout', 'pos_weight', 'dyn_weighting', 'stack' ]
