@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     argparser.add_argument('-b', '--batch_size', help='batch size. Default=16', type=int, default=16)
     argparser.add_argument('-e', '--nb_epochs', help='Max nb epochs. Default=40', type=int, default=40)
-    argparser.add_argument('-o', '--only_frame_epochs', help='First epochs only for frame identification. Default=0', type=int, default=0)
+    argparser.add_argument('-o', '--only_frame_nb_epochs', help='First epochs only for frame identification. Default=0', type=int, default=0)
     argparser.add_argument('-w', '--w_emb_size', help='size of word embeddings. Default=100', type=int, default=100)
     argparser.add_argument('-l', '--l_emb_size', help='size of lemma embeddings. Default=100', type=int, default=100)
     argparser.add_argument('-p', '--p_emb_size', help='size of POS embeddings. Default=100', type=int, default=100)
