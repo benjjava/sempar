@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 
 
-    model_file = args.out_dir+'/model'
+    model_file = args.out_dir+'../model.pt'
 
     # before anything: check whether we will be able to dump the model
     pdir = os.path.dirname(model_file)
@@ -172,6 +172,6 @@ if __name__ == "__main__":
     print('parsing...')
 
 
-    biaffineparser.predict_and_evaluate(data['test'], args.out_dir+'/parsed.txt', args.out_csv_test )
+    biaffineparser.predict_and_evaluate(data['test'], args.out_dir+'/parsed'+args.config_name+'.txt', args.out_csv_test )
 
     print('end')
