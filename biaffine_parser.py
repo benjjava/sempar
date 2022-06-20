@@ -644,7 +644,7 @@ mlp_lab_o_size = 400
 
 
         log_heading_res = ['best_epoch', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
-        log_values_res  = list(map(lambda x:"%5.3f" %x, [best_epoch, val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
+        log_values_res  = [best_epoch] + list(map(lambda x:"%5.3f" %x, [ val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
 
         return log_heading_res, log_values_res
        
@@ -704,7 +704,7 @@ mlp_lab_o_size = 400
         scores_names  = ['test_score_fra', 'test_fscore_u', 'test_fscore_l']
         scores_values = list(map(lambda x:"%5.3f" %x, [100*test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred)]))
         #for stream in [sys.stdout, log_stream]:
-        print(list(zip(scores_names, scores_values)))
+        #print(list(zip(scores_names, scores_values)))
 
         if csv_file:
 

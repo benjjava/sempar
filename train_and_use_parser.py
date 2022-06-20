@@ -49,8 +49,8 @@ if __name__ == "__main__":
     argparser.add_argument('--frame_training', action="store_true", help='Whether to parse frame', default=False)
     argparser.add_argument('--role_training', action="store_true", help='Whether to parse arcs and labels roles', default=False)
 
-    argparser.add_argument('--device_id', help='in train mode only: GPU cuda device id (in test mode: device is read in model). Default=0', type=int, default=1)
-    argparser.add_argument('--pos_arc_weight', help='(for graph mode only) weight for positive arcs in binary cross-entropy. Default=1.5', type=float, default=1.5)
+    argparser.add_argument('--device_id', help='in train mode only: GPU cuda device id (in test mode: device is read in model). Default=1', type=int, default=1)
+    argparser.add_argument('--pos_arc_weight', help='(for graph mode only) weight for positive arcs in binary cross-entropy. Default=None', type=float, default=None)
     argparser.add_argument('-r', '--learning_rate', help='learning rate, default=0.0001', type=float, default=0.00001)
     argparser.add_argument('-d', '--lex_dropout', help='lexical dropout rate, default=0.33', type=float, default=0.33)
 
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     biaffineparser.load_state_dict(torch.load(model_file))
     print('model loaded')
     print('parsing dev...')
-    biaffineparser.predict_and_evaluate(data['dev'], args.out_dir+'/dev_parsed'+args.config_name+'.txt', config_name=args.config_name )
+    biaffineparser.predict_and_evaluate(data['dev'], parsed_file=args.out_dir+'/dev_parsed'+args.config_name+'.txt')
     print('parsing test...')
-    biaffineparser.predict_and_evaluate(data['test'], args.out_dir+'/test_parsed'+args.config_name+'.txt')
+    biaffineparser.predict_and_evaluate(data['test'], parsed_file=args.out_dir+'/test_parsed'+args.config_name+'.txt', csv_file= args.out_csv_test, config_name=args.config_name)
     print('end')
