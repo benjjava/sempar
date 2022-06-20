@@ -169,9 +169,8 @@ if __name__ == "__main__":
 
     biaffineparser.load_state_dict(torch.load(model_file))
     print('model loaded')
-    print('parsing...')
-
-
-    biaffineparser.predict_and_evaluate(data['test'], args.out_dir+'/parsed'+args.config_name+'.txt', args.out_csv_test )
-
+    print('parsing dev...')
+    biaffineparser.predict_and_evaluate(data['dev'], args.out_dir+'/dev_parsed'+args.config_name+'.txt', config_name=args.config_name )
+    print('parsing test...')
+    biaffineparser.predict_and_evaluate(data['test'], args.out_dir+'/test_parsed'+args.config_name+'.txt')
     print('end')

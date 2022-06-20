@@ -277,6 +277,8 @@ mlp_lab_o_size = 400
             arc_h = self.arc_h_mlp(hidden_frame)
             lab_h = self.lab_h_mlp(hidden_frame)
 
+        # mode cat : avant mlp de specialisation
+        #            concat de la couche cachée du MLPframe avec la repres recurrente
         elif self.stack == 'cat':
             arc_h = self.arc_h_mlp(torch.cat((lstm_hidden_seq, hidden_frame), dim=-1))
             lab_h = self.lab_h_mlp(torch.cat((lstm_hidden_seq, hidden_frame), dim=-1))
@@ -531,7 +533,7 @@ mlp_lab_o_size = 400
                  self.nb_epochs_frame_only -=1
 
             print(train_nb_correct_u, train_nb_correct_l, train_nb_gold, train_nb_pred)
-            train_scores_fr.append(train_nb_correct_f/train_nb_gold_frame if train_nb_gold_frame else 0)
+            train_scores_fr.append(100*train_nb_correct_f/train_nb_gold_frame if train_nb_gold_frame else 0)
             train_fscores_u.append( fscore(train_nb_correct_u, train_nb_gold, train_nb_pred) )            
             train_fscores_l.append( fscore(train_nb_correct_l, train_nb_gold, train_nb_pred) )            
             train_losses.append(train_loss)
@@ -577,7 +579,7 @@ mlp_lab_o_size = 400
                         val_nb_pred += nb_pred
                         
                     print(val_nb_correct_u, val_nb_correct_l, val_nb_gold, val_nb_pred)
-                    val_scores_fr.append(val_nb_correct_f/val_nb_gold_frame if val_nb_gold_frame else 0)
+                    val_scores_fr.append(100*val_nb_correct_f/val_nb_gold_frame if val_nb_gold_frame else 0)
                     val_fscores_u.append( fscore(val_nb_correct_u, val_nb_gold, val_nb_pred) )            
                     val_fscores_l.append( fscore(val_nb_correct_l, val_nb_gold, val_nb_pred) )            
                     val_losses.append(val_loss)
@@ -585,7 +587,11 @@ mlp_lab_o_size = 400
                     val_arc_losses.append(val_arc_loss)
                     val_lab_losses.append(val_lab_loss)
 
-                self.log_perf(log_stream, epoch, 'Valid', val_loss, val_frame_loss, val_arc_loss, val_lab_loss, val_scores_fr[-1], val_fscores_u[-1], val_fscores_l[-1])
+                self.log_perf(log_stream, epoch, '\tValid', val_loss, val_frame_loss, val_arc_loss, val_lab_loss, val_scores_fr[-1], val_fscores_u[-1], val_fscores_l[-1])
+
+                if self.dyn_weighting:
+                    for stream in [sys.stdout, log_stream]:
+                        stream.write(" dynamic weighting, frame= %d\n, unlab=   , lab=   " % epoch)
 
                 #save the parameters if needed
                 if best_l < val_fscores_l[-1] and self.nb_epochs_frame_only==0:
@@ -597,6 +603,9 @@ mlp_lab_o_size = 400
                         torch.save(self.state_dict(), out_model_file)
 
             scheduler.step()
+            for stream in [sys.stdout, log_stream]:
+                stream.write("\n")
+
         for stream in [sys.stdout, log_stream]:
           stream.write("train losses: %s\n" % ' / '.join([ "%.2f" % x for x in train_losses]))
           stream.write("val   losses: %s\n" % ' / '.join([ "%.2f" % x for x in val_losses]))
@@ -635,7 +644,7 @@ mlp_lab_o_size = 400
 
 
         log_heading_res = ['best_epoch', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
-        log_values_res  = list(map(lambda x:"%5.2f" %x, [best_epoch, val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
+        log_values_res  = list(map(lambda x:"%5.3f" %x, [best_epoch, val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
 
         return log_heading_res, log_values_res
        
@@ -651,7 +660,7 @@ mlp_lab_o_size = 400
           stream.write("%s L Fscore  after epoch %d : %.2f\n\n" % (ctype, epoch, f_l))
 
     def log_train_hyper(self, outstream):
-        for h in ['w_emb_size', 'l_emb_size', 'p_emb_size', 'lstm_h_size','mlp_arc_o_size','mlp_arc_dropout','beta1','beta2','lr','use_pretrained_w_emb']:
+        for h in ['w_emb_size', 'l_emb_size', 'p_emb_size', 'lstm_h_size','mlp_arc_o_size','mlp_arc_dropout','mlp_lab_o_size','mlp_lab_dropout','mlp_frame_h_size', 'beta1','beta2','lr','use_pretrained_w_emb']:
           outstream.write("%s : %s\n" %(h, str(self.__dict__[h])))
         outstream.write("\n")
         for h in ['batch_size', 'beta1','beta2','lr', 'nb_epochs_frame_only', 'lex_dropout', 'use_pretrained_w_emb','graph_mode']:
@@ -693,7 +702,7 @@ mlp_lab_o_size = 400
                 test_nb_pred += nb_pred
 
         scores_names  = ['test_score_fra', 'test_fscore_u', 'test_fscore_l']
-        scores_values = list(map(lambda x:"%5.2f" %x, [test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred)]))
+        scores_values = list(map(lambda x:"%5.3f" %x, [100*test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred)]))
         #for stream in [sys.stdout, log_stream]:
         print(list(zip(scores_names, scores_values)))
 

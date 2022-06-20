@@ -183,7 +183,7 @@ class DepDataSet:
 
 class DepGraphDataSet(DepDataSet):
     """ Dependency graphs dataset
-    one token = 5-tuple (form, lemma, tag, list of heads, list of labels)
+    one token = 6-tuple (form, lemma, tag, list of heads, list of labels, list of frames)
     """
     def __init__(self, *args, **kwargs):
         super(DepGraphDataSet, self).__init__(*args, **kwargs)
