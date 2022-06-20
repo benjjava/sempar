@@ -660,7 +660,7 @@ mlp_lab_o_size = 400
           stream.write("%s L Fscore  after epoch %d : %.2f\n\n" % (ctype, epoch, f_l))
 
     def log_train_hyper(self, outstream):
-        for h in ['w_emb_size', 'l_emb_size', 'p_emb_size', 'lstm_h_size','mlp_arc_o_size','mlp_arc_dropout','mlp_lab_o_size','mlp_lab_dropout','mlp_frame_h_size', 'beta1','beta2','lr','use_pretrained_w_emb']:
+        for h in ['w_emb_size', 'l_emb_size', 'p_emb_size', 'lstm_h_size','mlp_arc_o_size','mlp_arc_dropout','mlp_lab_o_size','mlp_lab_dropout','mlp_frame_h_size', 'beta1','beta2','lr','use_pretrained_w_emb', 'stack']:
           outstream.write("%s : %s\n" %(h, str(self.__dict__[h])))
         outstream.write("\n")
         for h in ['batch_size', 'beta1','beta2','lr', 'nb_epochs_frame_only', 'lex_dropout', 'use_pretrained_w_emb','graph_mode']:
