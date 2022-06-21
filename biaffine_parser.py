@@ -644,7 +644,7 @@ mlp_lab_o_size = 400
 
 
         log_heading_res = ['best_epoch', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
-        log_values_res  = [best_epoch] + list(map(lambda x:"%5.3f" %x, [ val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
+        log_values_res  = [str(best_epoch)] + list(map(lambda x:"%5.3f" %x, [ val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
 
         return log_heading_res, log_values_res
        
