@@ -427,10 +427,14 @@ mlp_lab_o_size = 400
         self.lex_dropout = lex_dropout # proba of word / lemma / pos tag dropout
         self.batch_size = batch_size
         self.beta1 = 0.9
-        self.beta2 = 0.9
+        #self.beta2 = 0.9
+        self.beta2 = 0.999
+
+
         #optimizer = optim.SGD(biaffineparser.parameters(), lr=LR)
         #optimizer = optim.Adam(self.parameters(), lr=lr, betas=(0., 0.95), eps=1e-09)
-        optimizer = optim.Adam(self.parameters(), lr=lr, betas=(self.beta1, self.beta2), eps=1e-09)
+        #optimizer = optim.Adam(self.parameters(), lr=lr, betas=(self.beta1, self.beta2), eps=1e-09)
+        optimizer = optim.AdamW(self.parameters(), lr=self.lr, betas=(self.beta1, self.beta2), eps=1e-08, weight_decay=0.01 )
         # from benoit
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
         
