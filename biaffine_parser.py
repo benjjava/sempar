@@ -584,7 +584,7 @@ mlp_lab_o_size = 400
 
                     #precision et rappel dans log
                     #print(val_nb_correct_u, val_nb_correct_l, val_nb_gold, val_nb_pred)
-                    for stream in [sys.stdout, outstream]:
+                    for stream in [sys.stdout, log_stream]:
                         stream.write("val nb pred arcs %d , val nb gold arcs %d\n" % (val_nb_pred, val_nb_gold))
                         stream.write("val correct unlab  %d , val correct lab %d\n" % (val_nb_correct_u, val_nb_correct_l))
 
