@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
 
 
-    model_file = args.out_dir+'/../model'+str(args.device_id)'.pt'
+    model_file = args.out_dir+'/../model'+str(args.device_id)+'.pt'
 
     # before anything: check whether we will be able to dump the model
     pdir = os.path.dirname(model_file)
