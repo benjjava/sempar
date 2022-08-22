@@ -427,8 +427,8 @@ mlp_lab_o_size = 400
         self.lex_dropout = lex_dropout # proba of word / lemma / pos tag dropout
         self.batch_size = batch_size
         self.beta1 = 0.9
-        #self.beta2 = 0.9
-        self.beta2 = 0.999
+        self.beta2 = 0.9
+        #self.beta2 = 0.999
 
 
         #optimizer = optim.SGD(biaffineparser.parameters(), lr=LR)
@@ -581,8 +581,13 @@ mlp_lab_o_size = 400
                         val_nb_correct_l += nb_correct_l
                         val_nb_gold += nb_gold
                         val_nb_pred += nb_pred
-                        
-                    print(val_nb_correct_u, val_nb_correct_l, val_nb_gold, val_nb_pred)
+
+                    #precision et rappel dans log
+                    #print(val_nb_correct_u, val_nb_correct_l, val_nb_gold, val_nb_pred)
+                    for stream in [sys.stdout, outstream]:
+                        stream.write("val nb pred arcs %d , val nb gold arcs %d\n" % (val_nb_pred, val_nb_gold))
+                        stream.write("val correct unlab  %d , val correct lab %d\n" % (val_nb_correct_u, val_nb_correct_l))
+
                     val_scores_fr.append(100*val_nb_correct_f/val_nb_gold_frame if val_nb_gold_frame else 0)
                     val_fscores_u.append( fscore(val_nb_correct_u, val_nb_gold, val_nb_pred) )            
                     val_fscores_l.append( fscore(val_nb_correct_l, val_nb_gold, val_nb_pred) )            
