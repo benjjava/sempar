@@ -278,7 +278,7 @@ class DepGraphDataSet(DepDataSet):
         # dependencies adjacency matrixes for sents in batch
         b_arc_adja = torch.from_numpy(b_arc_adja).to(self.device)
         b_lab_adja = torch.from_numpy(b_lab_adja).to(self.device)
-        #
+        # frames matrix for sents in batch (non binary)
         b_fram_mat = torch.from_numpy(b_fram_mat).to(self.device) # (b, m)
         
         #test pour target location frame

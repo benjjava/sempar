@@ -386,12 +386,23 @@ mlp_lab_o_size = 400
                     pred_labels = torch.argmax(S_lab, dim=1) # for all arcs (not only the predicted arcs)
                     # count correct labels for the predicted arcs only
                     nb_correct_u_and_l = torch.sum((pred_labels == lab_adja).float() * pred_arcs).item()
-
+                
                 else:
                     nb_correct_u = 0
                     nb_correct_u_and_l = 0
                     nb_gold = 0
                     nb_pred = 0
+
+                if self.role_training and self.nb_epochs_frame_only == 0 and self.frame_training::
+
+                    pred_arcs_and_f = ((S_arc > 0).int() * pred_masks) * ((pred_frame == fram_mat).float()*(fram_mat > 0).int()).unsqueeze(2)
+                    nb_correct_u_and_f = torch.sum(pred_arcs * arc_adja).int()
+                    nb_correct_l_and_f = torch.sum((pred_labels == lab_adja).float() * pred_arcs_and_f).item()
+
+                else:
+                    nb_correct_u_and_f = 0
+                    nb_correct_l_and_f = 0
+
 
 
         if self.dyn_weighting:
@@ -410,7 +421,7 @@ mlp_lab_o_size = 400
             loss = lab_loss + arc_loss + frame_loss
         
         # returning the sub-losses too for trace purpose
-        return loss, frame_loss.item(), arc_loss.item(), lab_loss.item(), nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_gold_frame, nb_gold, nb_pred    
+        return loss, frame_loss.item(), arc_loss.item(), lab_loss.item(), nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_correct_u_and_f, nb_correct_l_and_f,  nb_gold_frame, nb_gold, nb_pred    
     
 
     def train_model(self, train_data, val_data, log_stream, nb_epochs, batch_size, lr, lex_dropout, nb_epochs_frame_only=0, out_model_file=None, graph_mode=True, frame_training=True, role_training=False, pos_weight=None, config_name=None, score_csv=None):
@@ -462,6 +473,8 @@ mlp_lab_o_size = 400
         train_scores_fr     = []
         train_fscores_u = []
         train_fscores_l = []
+        train_scores_u_and_f = []
+        train_scores_l_and_f = []
         
         val_losses = []
         
@@ -472,6 +485,8 @@ mlp_lab_o_size = 400
         val_scores_fr   =[]
         val_fscores_u = []
         val_fscores_l = []
+        val_scores_u_and_f = []
+        val_scores_l_and_f = []
         
         best_epoch   = 0                 
         best_l = 0
@@ -495,6 +510,8 @@ mlp_lab_o_size = 400
             train_nb_correct_f = 0
             train_nb_correct_u = 0
             train_nb_correct_l = 0
+            train_nb_correct_u_and_f = 0
+            train_nb_correct_l_and_f = 0
             train_nb_pred = 0
             train_nb_gold = 0
             train_nb_gold_frame = 0 
@@ -512,7 +529,7 @@ mlp_lab_o_size = 400
                   print("MEMORY BEFORE BATCH FORWARD AND LOSS")
                   printm()
 
-                loss, frame_loss, arc_loss, lab_loss, nb_correct_f, nb_correct_u, nb_correct_l, nb_gold_frame, nb_gold, nb_pred = self.batch_forward_and_loss(batch)
+                loss, frame_loss, arc_loss, lab_loss, nb_correct_f, nb_correct_u, nb_correct_l, nb_correct_u_and_f, nb_correct_l_and_f, nb_gold_frame, nb_gold, nb_pred = self.batch_forward_and_loss(batch)
                 train_loss += loss.item()
                 if frame_loss:
                     train_frame_loss += frame_loss
@@ -529,6 +546,8 @@ mlp_lab_o_size = 400
                 train_nb_correct_f += nb_correct_f
                 train_nb_correct_u += nb_correct_u
                 train_nb_correct_l += nb_correct_l
+                train_nb_correct_u_and_f += nb_correct_u_and_f
+                train_nb_correct_l_and_f += nb_correct_l_and_f
                 train_nb_gold_frame += nb_gold_frame
                 train_nb_gold += nb_gold
                 train_nb_pred += nb_pred
@@ -539,14 +558,18 @@ mlp_lab_o_size = 400
             print(train_nb_correct_u, train_nb_correct_l, train_nb_gold, train_nb_pred)
             train_scores_fr.append(100*train_nb_correct_f/train_nb_gold_frame if train_nb_gold_frame else 0)
             train_fscores_u.append( fscore(train_nb_correct_u, train_nb_gold, train_nb_pred) )            
-            train_fscores_l.append( fscore(train_nb_correct_l, train_nb_gold, train_nb_pred) )            
+            train_fscores_l.append( fscore(train_nb_correct_l, train_nb_gold, train_nb_pred) ) 
+            train_fscores_u_and_f.append( fscore(train_nb_correct_u_and_f, train_nb_gold, train_nb_pred) )            
+            train_fscores_l_and_f.append( fscore(train_nb_correct_l_and_f, train_nb_gold, train_nb_pred) )            
             train_losses.append(train_loss)
             train_arc_losses.append(train_arc_loss)
             train_lab_losses.append(train_lab_loss)
             train_frame_losses.append(train_frame_loss)
 
             self.log_perf(log_stream, epoch, 'Train', train_loss, train_frame_loss, train_arc_loss, train_lab_loss, 
-                          train_scores_fr[-1], train_fscores_u[-1], train_fscores_l[-1])
+                          train_scores_fr[-1], train_fscores_u[-1], train_fscores_l[-1],
+                          train_fscores_u_and_f[-1], train_fscores_l_and_f[-1]
+                          )
 
             if val_data:
                 self.eval()
@@ -555,6 +578,8 @@ mlp_lab_o_size = 400
                 val_nb_gold_frame = 0
                 val_nb_correct_u = 0
                 val_nb_correct_l = 0
+                val_nb_correct_u_and_f = 0
+                val_nb_correct_l_and_f =0
                 val_nb_pred = 0
                 val_nb_gold = 0
 
@@ -565,7 +590,7 @@ mlp_lab_o_size = 400
                     val_arc_loss = 0
                     val_lab_loss = 0
                     for batch in val_data.make_batches(self.batch_size, sort_dec_length=True):
-                        loss, frame_loss, arc_loss, lab_loss, nb_correct_f, nb_correct_u, nb_correct_l, nb_gold_frame, nb_gold, nb_pred = self.batch_forward_and_loss(batch)
+                        loss, frame_loss, arc_loss, lab_loss, nb_correct_f, nb_correct_u, nb_correct_l, nb_correct_u_and_f, nb_correct_l_and_f, nb_gold_frame, nb_gold, nb_pred = self.batch_forward_and_loss(batch)
                         val_loss += loss.item()
                         if frame_loss:
                             val_frame_loss += frame_loss
@@ -579,6 +604,8 @@ mlp_lab_o_size = 400
                         val_nb_gold_frame += nb_gold_frame
                         val_nb_correct_u += nb_correct_u
                         val_nb_correct_l += nb_correct_l
+                        val_nb_correct_u_and_f += nb_correct_u_and_f
+                        val_nb_correct_l_and_f += nb_correct_l_and_f
                         val_nb_gold += nb_gold
                         val_nb_pred += nb_pred
 
@@ -590,13 +617,19 @@ mlp_lab_o_size = 400
 
                     val_scores_fr.append(100*val_nb_correct_f/val_nb_gold_frame if val_nb_gold_frame else 0)
                     val_fscores_u.append( fscore(val_nb_correct_u, val_nb_gold, val_nb_pred) )            
-                    val_fscores_l.append( fscore(val_nb_correct_l, val_nb_gold, val_nb_pred) )            
+                    val_fscores_l.append( fscore(val_nb_correct_l, val_nb_gold, val_nb_pred) ) 
+                    val_fscores_u_and_f.append( fscore(val_nb_correct_u_and_f, val_nb_gold, val_nb_pred) )            
+                    val_fscores_l_and_f.append( fscore(val_nb_correct_l_and_f, val_nb_gold, val_nb_pred) )  
+
                     val_losses.append(val_loss)
                     val_frame_losses.append(val_frame_loss)
                     val_arc_losses.append(val_arc_loss)
                     val_lab_losses.append(val_lab_loss)
 
-                self.log_perf(log_stream, epoch, '\tValid', val_loss, val_frame_loss, val_arc_loss, val_lab_loss, val_scores_fr[-1], val_fscores_u[-1], val_fscores_l[-1])
+                self.log_perf(log_stream, epoch, '\tValid', val_loss, val_frame_loss, val_arc_loss, val_lab_loss, val_scores_fr[-1], 
+                                                            val_fscores_u[-1], val_fscores_l[-1],
+                                                            val_fscores_u_and_f[-1], val_fscores_l_and_f[-1],
+                                                            )
 
                 if self.dyn_weighting:
                     for stream in [sys.stdout, log_stream]:
@@ -629,7 +662,12 @@ mlp_lab_o_size = 400
 
         #print('drop token w emb', self.indices.iw2emb[2])
 
-        log_heading_res, log_values_res = self.build_log_res(best_epoch, val_scores_fr[best_epoch-1], val_fscores_u[best_epoch-1], val_fscores_l[best_epoch-1])
+        log_heading_res, log_values_res = self.build_log_res(best_epoch, val_scores_fr[best_epoch-1], 
+                                                            val_fscores_u[best_epoch-1], 
+                                                            val_fscores_l[best_epoch-1],
+                                                            val_fscores_u_and_f[best_epoch-1], 
+                                                            val_fscores_l_and_f[best_epoch-1]
+                                                            )
         if config_name:
             log_heading_res.append("config_name")
             log_values_res.append(config_name)
@@ -642,7 +680,7 @@ mlp_lab_o_size = 400
             df.to_csv(score_csv, mode='a', index=False, header=not os.path.exists(score_csv))
 
 
-    def build_log_res(self, best_epoch, val_score_fr, val_fscore_u, val_fscore_l):
+    def build_log_res(self, best_epoch, val_score_fr, val_fscore_u, val_fscore_l, val_fscore_u_and_f, val_fscore_l_and_f):
 
         featnames = ['w_emb_size', 'use_pretrained_w_emb', 
                     'l_emb_size', 'p_emb_size', 'freeze_bert', 
@@ -652,21 +690,23 @@ mlp_lab_o_size = 400
         featvals = [ str(self.__dict__[f]) for f in featnames ]
 
 
-        log_heading_res = ['best_epoch', 'val_score_fr', 'val_fscore_u', 'val_fscore_l'] + featnames 
-        log_values_res  = [str(best_epoch)] + list(map(lambda x:"%5.3f" %x, [ val_score_fr, val_fscore_u, val_fscore_l])) + featvals 
+        log_heading_res = ['best_epoch', 'val_score_fr', 'val_fscore_u', 'val_fscore_l', 'val_fscore_u_and_f', 'va_fscore_l_and_f'] + featnames 
+        log_values_res  = [str(best_epoch)] + list(map(lambda x:"%5.3f" %x, [ val_score_fr, val_fscore_u, val_fscore_l, val_fscore_u_and_f, val_fscore_l_and_f])) + featvals 
 
         return log_heading_res, log_values_res
        
 
-    def log_perf(self, outstream, epoch, ctype, l, frame_l, arc_l, lab_l, acc_fr, f_u, f_l):
+    def log_perf(self, outstream, epoch, ctype, l, frame_l, arc_l, lab_l, acc_fr, sf_u, sf_l, sf_u_f, sf_l_f):
         for stream in [sys.stdout, outstream]:
           stream.write("%s     Loss   for epoch %d: %.2f\n" % (ctype, epoch, l))
           stream.write("%s fra Loss   for epoch %d: %.2f\n" % (ctype, epoch, frame_l))
           stream.write("%s arc Loss   for epoch %d: %.2f\n" % (ctype, epoch, arc_l))
           stream.write("%s lab Loss   for epoch %d: %.2f\n" % (ctype, epoch, lab_l))
           stream.write("%s Frame ACC after epoch %d : %.2f\n" % (ctype, epoch, acc_fr))
-          stream.write("%s U Fscore  after epoch %d : %.2f\n" % (ctype, epoch, f_u))
-          stream.write("%s L Fscore  after epoch %d : %.2f\n\n" % (ctype, epoch, f_l))
+          stream.write("%s U Fscore  after epoch %d : %.2f\n" % (ctype, epoch, sf_u))
+          stream.write("%s L Fscore  after epoch %d : %.2f\n\n" % (ctype, epoch, sf_l))
+          stream.write("%s U_and_fr Fscore  after epoch %d : %.2f\n" % (ctype, epoch, sf_u_f))
+          stream.write("%s L_and_fr Fscore  after epoch %d : %.2f\n\n" % (ctype, epoch, sf_l_f))
 
     def log_train_hyper(self, outstream):
         for h in ['w_emb_size', 'l_emb_size', 'p_emb_size', 'lstm_h_size','mlp_arc_o_size','mlp_arc_dropout','mlp_lab_o_size','mlp_lab_dropout','mlp_frame_h_size', 'beta1','beta2','lr','pos_weight', 'stack']:
@@ -692,6 +732,8 @@ mlp_lab_o_size = 400
         test_nb_correct_f = 0
         test_nb_correct_u = 0
         test_nb_correct_l = 0
+        test_nb_correct_u_and_f=0
+        test_nb_correct_l_and_f=0
         test_nb_gold_frame = 0
         test_nb_gold = 0
         test_nb_pred = 0
@@ -701,17 +743,24 @@ mlp_lab_o_size = 400
         with torch.no_grad():
             for batch in test_data.make_batches(self.batch_size, shuffle_data=False, sort_dec_length=True, shuffle_batches=False):
 
-                nb_correct_f, nb_correct_u, nb_correct_l, nb_gold_frame, nb_gold, nb_pred = self.batch_predict_and_evaluate(batch, out_stream)
+                nb_correct_f, nb_correct_u, nb_correct_l, nb_correct_u_and_f, nb_correct_l_and_f,nb_gold_frame, nb_gold, nb_pred = self.batch_predict_and_evaluate(batch, out_stream)
 
                 test_nb_correct_f += nb_correct_f
                 test_nb_correct_u += nb_correct_u
                 test_nb_correct_l += nb_correct_l
+                test_nb_correct_u_and_f += nb_correct_u_and_f
+                test_nb_correct_l_and_f +c= nb_correct_l_and_f
                 test_nb_gold_frame += nb_gold_frame
                 test_nb_gold += nb_gold
                 test_nb_pred += nb_pred
 
-        scores_names  = ['test_score_fra', 'test_fscore_u', 'test_fscore_l']
-        scores_values = list(map(lambda x:"%5.3f" %x, [100*test_nb_correct_f/test_nb_gold_frame, fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), fscore(test_nb_correct_l, test_nb_gold, test_nb_pred)]))
+        scores_names  = ['test_score_fra', 'test_fscore_u', 'test_fscore_l', 'test_fscore_u_and_f', 'test_fscore_l_and_f']
+        scores_values = list(map(lambda x:"%5.3f" %x, [100*test_nb_correct_f/test_nb_gold_frame, 
+                                                        fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), 
+                                                        fscore(test_nb_correct_l, test_nb_gold, test_nb_pred),
+                                                        fscore(test_nb_correct_u_and_f, test_nb_gold, test_nb_pred),
+                                                        fscore(test_nb_correct_u_and_f, test_nb_gold, test_nb_pred)
+                                                       ]))
         #for stream in [sys.stdout, log_stream]:
         #print(list(zip(scores_names, scores_values)))
 
@@ -772,6 +821,16 @@ mlp_lab_o_size = 400
             nb_gold = 0
             nb_pred = 0
 
+        if self.role_training and self.nb_epochs_frame_only == 0 and self.frame_training::
+
+            pred_arcs_and_f = ((S_arc > 0).int() * pred_masks)*((pred_frame == fram_mat).float()*(fram_mat > 0).int()).unsqueeze(2)
+            nb_correct_u_and_f = torch.sum(pred_arcs * arc_adja).int()
+            nb_correct_l_and_f = torch.sum((pred_labels == lab_adja).float() * pred_arcs_and_f).item()
+
+        else:
+            nb_correct_u_and_f = 0
+            nb_correct_l_and_f = 0
+
         if out_stream:
 
             # whether sentences in batch start with a dummy root token or not
@@ -817,4 +876,4 @@ mlp_lab_o_size = 400
                     out_stream.write('\t'.join(out) + '\n')
                 out_stream.write('\n')
 
-        return nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_gold_frame, nb_gold, nb_pred
+        return nb_correct_f, nb_correct_u, nb_correct_u_and_l, nb_correct_u_and_f, nb_correct_l_and_f, nb_gold_frame, nb_gold, nb_pred
