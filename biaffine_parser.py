@@ -396,7 +396,7 @@ mlp_lab_o_size = 400
                 if self.role_training and self.nb_epochs_frame_only == 0 and self.frame_training:
 
                     pred_arcs_and_f = ((S_arc > 0).int() * pred_masks) * ((pred_frame == fram_mat).float()*(fram_mat > 0).int()).unsqueeze(2)
-                    nb_correct_u_and_f = torch.sum(pred_arcs * arc_adja).int()
+                    nb_correct_u_and_f = torch.sum(pred_arcs_and_f * arc_adja).int()
                     nb_correct_l_and_f = torch.sum((pred_labels == lab_adja).float() * pred_arcs_and_f).item()
 
                 else:
@@ -657,6 +657,10 @@ mlp_lab_o_size = 400
           stream.write("val   unlab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_u]))
           stream.write("train   lab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_l]))
           stream.write("val     lab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_l]))
+          stream.write("train unlabf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_u]))
+          stream.write("val   unlabf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_u]))
+          stream.write("train   labf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_l]))
+          stream.write("val     labf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_l]))
 
 
 
