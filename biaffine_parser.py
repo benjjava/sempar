@@ -657,10 +657,10 @@ mlp_lab_o_size = 400
           stream.write("val   unlab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_u]))
           stream.write("train   lab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_l]))
           stream.write("val     lab fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_l]))
-          stream.write("train unlabf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_u]))
-          stream.write("val   unlabf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_u]))
-          stream.write("train   labf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_l]))
-          stream.write("val     labf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_l]))
+          stream.write("train unlabf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_u_and_f]))
+          stream.write("val   unlabf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_u_and_f]))
+          stream.write("train   labf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in train_fscores_l_and_f]))
+          stream.write("val     labf fscores: %s\n" % ' / '.join([ "%.4f" % x for x in val_fscores_l_and_f]))
 
 
 
