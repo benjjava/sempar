@@ -473,8 +473,8 @@ mlp_lab_o_size = 400
         train_scores_fr     = []
         train_fscores_u = []
         train_fscores_l = []
-        train_scores_u_and_f = []
-        train_scores_l_and_f = []
+        train_fscores_u_and_f = []
+        train_fscores_l_and_f = []
         
         val_losses = []
         
@@ -485,8 +485,8 @@ mlp_lab_o_size = 400
         val_scores_fr   =[]
         val_fscores_u = []
         val_fscores_l = []
-        val_scores_u_and_f = []
-        val_scores_l_and_f = []
+        val_fscores_u_and_f = []
+        val_fscores_l_and_f = []
         
         best_epoch   = 0                 
         best_l = 0
