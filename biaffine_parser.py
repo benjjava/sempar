@@ -763,7 +763,7 @@ mlp_lab_o_size = 400
                                                         fscore(test_nb_correct_u, test_nb_gold, test_nb_pred), 
                                                         fscore(test_nb_correct_l, test_nb_gold, test_nb_pred),
                                                         fscore(test_nb_correct_u_and_f, test_nb_gold, test_nb_pred),
-                                                        fscore(test_nb_correct_u_and_f, test_nb_gold, test_nb_pred)
+                                                        fscore(test_nb_correct_l_and_f, test_nb_gold, test_nb_pred)
                                                        ]))
         #for stream in [sys.stdout, log_stream]:
         #print(list(zip(scores_names, scores_values)))
@@ -828,7 +828,7 @@ mlp_lab_o_size = 400
         if self.role_training and self.nb_epochs_frame_only == 0 and self.frame_training:
 
             pred_arcs_and_f = ((S_arc > 0).int() * pred_masks)*((pred_frame == fram_mat).float()*(fram_mat > 0).int()).unsqueeze(2)
-            nb_correct_u_and_f = torch.sum(pred_arcs * arc_adja).int()
+            nb_correct_u_and_f = torch.sum(pred_arcs_and_f * arc_adja).int()
             nb_correct_l_and_f = torch.sum((pred_labels == lab_adja).float() * pred_arcs_and_f).item()
 
         else:
